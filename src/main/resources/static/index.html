@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Resume Analyzer</title>
+
+  <style>
+    body {
+        font-family: Arial;
+        background: #f4f6f8;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+    }
+
+    .card {
+        background: white;
+        padding: 15px;
+        margin: 10px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    button {
+        padding: 8px 12px;
+        margin: 5px;
+        cursor: pointer;
+    }
+
+    textarea {
+        width: 100%;
+        height: 100px;
+        margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>📄 AI Resume Analyzer</h1>
+
+<!-- 🔥 Upload Section -->
+<input type="file" id="file">
+<button onclick="uploadResume()">Upload Resume</button>
+
+<hr>
+
+<!-- 🔥 Resume List -->
+<h2>All Resumes</h2>
+<div id="resumes"></div>
+
+<hr>
+
+<!-- 🔥 Job Description -->
+<h2>🎯 Job Matching</h2>
+
+<textarea id="jobDesc" placeholder="Paste Job Description here..."></textarea>
+<br>
+<p id="result"></p>
+
+<script>
+
+  // 🔥 Upload Resume
+  function uploadResume() {
+
+      let file = document.getElementById("file").files[0];
+
+      if (!file) {
+          alert("Please select a file!");
+          return;
+      }
+
+      let formData = new FormData();
+      formData.append("file", file);
+
+      fetch("/api/resume/upload", {
+          method: "POST",
+          body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+          alert("Uploaded Successfully!");
+          loadResumes();
+      });
+  }
+
+  // 🔥 Load Resumes
+  function loadResumes() {
+
+      fetch("/api/resume/all")
+      .then(res => res.json())
+      .then(data => {
+
+          let output = "";
+
+          data.forEach(r => {
+              output += `
+                  <div class="card">
+                      <p><strong>ID:</strong> ${r.id}</p>
+                      <p><strong>📄 File:</strong> ${r.fileName}</p>
+                      <p><strong>📊 Skills:</strong> ${r.skills}</p>
+                      <p><strong>⭐ Score:</strong> ${r.score}/100</p>
+
+                      <button onclick="viewText(${r.id})">View Resume Text</button>
+
+                      <!-- 🔥 NEW BUTTON -->
+                      <button onclick="matchJob(${r.id})">Match Job</button>
+                  </div>
+              `;
+          });
+
+          document.getElementById("resumes").innerHTML = output;
+      });
+  }
+
+  // 🔥 View Resume Text
+  function viewText(id) {
+
+      fetch("/api/resume/text/" + id)
+      .then(res => res.text())
+      .then(data => {
+          alert(data);
+      });
+  }
+
+  // 🔥 Match Job (NO PROMPT NOW)
+  function matchJob(id) {
+
+    let jobDesc = document.getElementById("jobDesc").value;
+
+    // ❗ CLEAR OLD RESULT FIRST
+    document.getElementById("result").innerHTML = "";
+
+    if (jobDesc.trim() === "") {
+        alert("Enter job description!");
+        return;
+    }
+
+    fetch("/api/resume/match/" + id, {
+        method: "POST",
+        headers: {
+            "Content-Type": "text/plain"
+        },
+        body: jobDesc
+    })
+    .then(res => res.text())
+    .then(data => {
+
+        // ❗ FORCE UPDATE NEW RESULT
+        document.getElementById("result").innerHTML =
+            "🔥 Resume ID " + id + " Match: " + data + "%";
+
+    })
+    .catch(err => {
+        console.log(err);
+        alert("Error in matching");
+    });
+}
+
+  // 🔥 Load on start
+  loadResumes();
+
+</script>
+
+</body>
+</html>
