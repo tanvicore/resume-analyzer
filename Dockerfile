@@ -1,5 +1,5 @@
-# Use official Eclipse Temurin JDK (recommended instead of openjdk)
-FROM eclipse-temurin:17-jdk
+# Stable Java 17 image (WORKS ON RENDER)
+FROM eclipse-temurin:17-jdk-jammy
 
 WORKDIR /app
 
