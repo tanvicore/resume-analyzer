@@ -28,7 +28,6 @@
 
     .sidebar h2 {
         margin-bottom: 30px;
-        font-size: 20px;
     }
 
     .sidebar p {
@@ -37,28 +36,16 @@
         color: #9ca3af;
     }
 
-    .sidebar p:hover {
+    .sidebar p:hover,
+    .sidebar .active {
         color: white;
+        font-weight: bold;
     }
 
     /* Main */
     .main {
         flex: 1;
-        padding: 20px 40px;
-    }
-
-    /* Header */
-    .header {
-        margin-bottom: 20px;
-    }
-
-    .header h1 {
-        font-size: 24px;
-        color: #111827;
-    }
-
-    .header p {
-        color: #6b7280;
+        padding: 30px;
     }
 
     /* Cards */
@@ -67,7 +54,6 @@
         border-radius: 10px;
         padding: 20px;
         margin-bottom: 20px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
 
     /* Inputs */
@@ -90,10 +76,6 @@
         cursor: pointer;
     }
 
-    button:hover {
-        background: #1d4ed8;
-    }
-
     /* Tags */
     .tag {
         background: #e5e7eb;
@@ -109,7 +91,6 @@
         height: 8px;
         background: #e5e7eb;
         border-radius: 10px;
-        margin-top: 5px;
     }
 
     .progress-bar {
@@ -117,23 +98,9 @@
         border-radius: 10px;
     }
 
-    /* Toast */
-    .toast {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: #111827;
-        color: white;
-        padding: 10px;
-        border-radius: 6px;
+    /* Hidden sections */
+    .section {
         display: none;
-    }
-
-    /* Loader */
-    .loader {
-        display: none;
-        color: #2563eb;
-        margin-bottom: 10px;
     }
   </style>
 </head>
@@ -143,141 +110,107 @@
 <!-- Sidebar -->
 <div class="sidebar">
   <h2>🚀 Analyzer</h2>
-  <p>Dashboard</p>
-  <p>Resumes</p>
-  <p>Analytics</p>
+  <p class="active" onclick="showSection('dashboard', this)">Dashboard</p>
+  <p onclick="showSection('resumes', this)">Resumes</p>
+  <p onclick="showSection('analytics', this)">Analytics</p>
 </div>
 
 <!-- Main -->
 <div class="main">
 
-  <div class="header">
-    <h1>Resume Analyzer</h1>
-    <p>Analyze resumes and match candidates efficiently</p>
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="section" style="display:block;">
+    <div class="card">
+      <h3>Upload Resume</h3>
+      <input type="file" id="file">
+      <button onclick="upload()">Upload</button>
+    </div>
+
+    <div class="card">
+      <h3>Job Description</h3>
+      <textarea id="jobDesc" rows="3"></textarea>
+    </div>
   </div>
 
-  <!-- Upload -->
-  <div class="card">
-    <h3>Upload Resume</h3>
-    <input type="file" id="file">
-    <button onclick="upload()">Upload</button>
+  <!-- RESUMES -->
+  <div id="resumes" class="section">
+    <div id="output"></div>
   </div>
 
-  <!-- Job Desc -->
-  <div class="card">
-    <h3>Job Description</h3>
-    <textarea id="jobDesc" rows="3"></textarea>
+  <!-- ANALYTICS -->
+  <div id="analytics" class="section">
+    <div class="card">
+      <h3>Analytics</h3>
+      <p id="total"></p>
+      <p id="avg"></p>
+    </div>
   </div>
-
-  <!-- Search -->
-  <div class="card">
-    <input type="text" id="search" placeholder="Search by skill..." onkeyup="filterResumes()">
-  </div>
-
-  <div id="count"></div>
-  <div class="loader" id="loader">Processing...</div>
-  <div id="output"></div>
 
 </div>
 
-<div class="toast" id="toast"></div>
-
 <script>
 
-  function showToast(msg){
-      let t=document.getElementById("toast");
-      t.innerText=msg;
-      t.style.display="block";
-      setTimeout(()=>t.style.display="none",2000);
+  // NAVIGATION
+  function showSection(id, el) {
+      document.querySelectorAll(".section").forEach(s => s.style.display = "none");
+      document.getElementById(id).style.display = "block";
+
+      document.querySelectorAll(".sidebar p").forEach(p => p.classList.remove("active"));
+      el.classList.add("active");
+
+      if(id === "resumes") loadResumes();
+      if(id === "analytics") loadAnalytics();
   }
 
+  // UPLOAD
   function upload(){
       let file=document.getElementById("file").files[0];
-      if(!file) return showToast("Select file");
+      if(!file) return alert("Select file");
 
       let formData=new FormData();
       formData.append("file",file);
 
-      document.getElementById("loader").style.display="block";
-
       fetch("/api/resume/upload",{method:"POST",body:formData})
-      .then(()=>{showToast("Uploaded");loadResumes();})
-      .finally(()=>document.getElementById("loader").style.display="none");
+      .then(()=>alert("Uploaded"))
   }
 
+  // LOAD RESUMES
   function loadResumes(){
       fetch("/api/resume/all")
       .then(res=>res.json())
-      .then(data=>render(data));
-  }
+      .then(data=>{
+          let output="";
 
-  function render(data){
-      if(data.length===0){
-          document.getElementById("output").innerHTML="No resumes";
-          return;
-      }
+          data.forEach(r=>{
+              let color=r.score>70?"#16a34a":r.score>40?"#f59e0b":"#dc2626";
 
-      let max=Math.max(...data.map(r=>r.score));
-      document.getElementById("count").innerHTML=`Total: ${data.length}`;
+              let skills=r.skills.split(",").map(s=>`<span class="tag">${s}</span>`).join("");
 
-      let output="";
+              output+=`
+              <div class="card">
+                  <h4>${r.fileName}</h4>
+                  <div>${skills}</div>
 
-      data.forEach(r=>{
-          let color=r.score>70?"#16a34a":r.score>40?"#f59e0b":"#dc2626";
+                  <p>Score: ${r.score}%</p>
+                  <div class="progress">
+                      <div class="progress-bar" style="width:${r.score}%;background:${color}"></div>
+                  </div>
 
-          let skills=r.skills.split(",").map(s=>`<span class="tag">${s}</span>`).join("");
+                  <button onclick="matchJob(${r.id})">Match</button>
 
-          output+=`
-          <div class="card">
-              <h4>${r.fileName}</h4>
-              ${r.score===max?"🏆 Top Candidate":""}
-              <div>${skills}</div>
-
-              <p>Score: ${r.score}%</p>
-              <div class="progress">
-                  <div class="progress-bar" style="width:${r.score}%;background:${color}"></div>
+                  <div id="match-${r.id}"></div>
               </div>
+              `;
+          });
 
-              <button onclick="viewText(${r.id})">View</button>
-              <button onclick="matchJob(${r.id})">Match</button>
-              <button onclick="deleteResume(${r.id})">Delete</button>
-
-              <div id="text-${r.id}"></div>
-              <div id="match-${r.id}"></div>
-          </div>
-          `;
-      });
-
-      document.getElementById("output").innerHTML=output;
-  }
-
-  function filterResumes(){
-      let keyword=document.getElementById("search").value.toLowerCase();
-
-      fetch("/api/resume/all")
-      .then(res=>res.json())
-      .then(data=>{
-          let filtered=data.filter(r=>r.skills.toLowerCase().includes(keyword));
-          render(filtered);
+          document.getElementById("output").innerHTML=output;
       });
   }
 
-  function deleteResume(id){
-      fetch("/api/resume/delete/"+id,{method:"DELETE"})
-      .then(()=>{showToast("Deleted");loadResumes();});
-  }
-
-  function viewText(id){
-      fetch("/api/resume/"+id)
-      .then(res=>res.json())
-      .then(data=>{
-          document.getElementById("text-"+id).innerHTML="<pre>"+data.extractedText+"</pre>";
-      });
-  }
-
+  // MATCH JOB
   function matchJob(id){
       let jobDesc=document.getElementById("jobDesc").value;
-      if(!jobDesc) return showToast("Enter job description");
+      if(!jobDesc) return alert("Enter job description");
 
       fetch("/api/resume/match/"+id,{
           method:"POST",
@@ -286,15 +219,22 @@
       })
       .then(res=>res.text())
       .then(data=>{
-          document.getElementById("match-"+id).innerHTML=`
-          Match: ${data}%
-          <div class="progress">
-              <div class="progress-bar" style="width:${data}%;background:#2563eb"></div>
-          </div>`;
+          document.getElementById("match-"+id).innerHTML=`Match: ${data}%`;
       });
   }
 
-  window.onload=loadResumes;
+  // ANALYTICS
+  function loadAnalytics(){
+      fetch("/api/resume/all")
+      .then(res=>res.json())
+      .then(data=>{
+          let total=data.length;
+          let avg=(data.reduce((a,b)=>a+b.score,0)/total || 0).toFixed(2);
+
+          document.getElementById("total").innerText="Total Resumes: "+total;
+          document.getElementById("avg").innerText="Average Score: "+avg+"%";
+      });
+  }
 
 </script>
 
