@@ -5,54 +5,103 @@ import org.springframework.stereotype.Service;
 @Service
 public class SkillService {
 
-    // 🔹 Extract skills
+    // 🔹 EXTRACT SKILLS FROM TEXT
     public String extractSkills(String text) {
+
+        if (text == null) return "";
+
+        text = text.toLowerCase();
 
         StringBuilder skills = new StringBuilder();
 
-        if (text.contains("Java")) skills.append("Java, ");
-        if (text.contains("Spring")) skills.append("Spring, ");
-        if (text.contains("Spring Boot")) skills.append("Spring Boot, ");
-        if (text.contains("SQL")) skills.append("SQL, ");
-        if (text.contains("MySQL")) skills.append("MySQL, ");
-        if (text.contains("HTML")) skills.append("HTML, ");
-        if (text.contains("CSS")) skills.append("CSS, ");
-        if (text.contains("Python")) skills.append("Python, ");
-        if (text.contains("Git")) skills.append("Git, ");
+        if (text.contains("java")) skills.append("Java, ");
+        if (text.contains("spring boot")) skills.append("Spring Boot, ");
+        else if (text.contains("spring")) skills.append("Spring, ");
+        if (text.contains("sql")) skills.append("SQL, ");
+        if (text.contains("mysql")) skills.append("MySQL, ");
+        if (text.contains("html")) skills.append("HTML, ");
+        if (text.contains("css")) skills.append("CSS, ");
+        if (text.contains("python")) skills.append("Python, ");
+        if (text.contains("git")) skills.append("Git, ");
 
-        return skills.toString();
+        return skills.toString().trim();
     }
 
-    // 🔥 CALCULATE SCORE
+    // 🔹 CALCULATE BASE SCORE (OPTIONAL FEATURE)
     public int calculateScore(String skills) {
+
+        if (skills == null) return 0;
+
+        skills = skills.toLowerCase();
+
         int score = 0;
 
-        if (skills.contains("Java")) score += 20;
-        if (skills.contains("Spring")) score += 20;
-        if (skills.contains("SQL")) score += 15;
-        if (skills.contains("HTML")) score += 10;
-        if (skills.contains("CSS")) score += 10;
-        if (skills.contains("Python")) score += 15;
-        if (skills.contains("Git")) score += 10;
+        if (skills.contains("java")) score += 20;
+        if (skills.contains("spring")) score += 20;
+        if (skills.contains("sql")) score += 15;
+        if (skills.contains("html")) score += 10;
+        if (skills.contains("css")) score += 10;
+        if (skills.contains("python")) score += 15;
+        if (skills.contains("git")) score += 10;
 
         return score;
     }
+
+    // 🔥 JOB MATCHING LOGIC (FINAL FIXED VERSION)
     public int matchJob(String resumeSkills, String jobDesc) {
 
-        int match = 0;
-        int total = 7;
+        if (resumeSkills == null || jobDesc == null) return 0;
 
-        // 🔥 convert both to lowercase
         resumeSkills = resumeSkills.toLowerCase();
         jobDesc = jobDesc.toLowerCase();
 
-        if (jobDesc.contains("java") && resumeSkills.contains("java")) match++;
-        if (jobDesc.contains("spring") && resumeSkills.contains("spring")) match++;
-        if (jobDesc.contains("sql") && resumeSkills.contains("sql")) match++;
-        if (jobDesc.contains("html") && resumeSkills.contains("html")) match++;
-        if (jobDesc.contains("css") && resumeSkills.contains("css")) match++;
-        if (jobDesc.contains("python") && resumeSkills.contains("python")) match++;
-        if (jobDesc.contains("git") && resumeSkills.contains("git")) match++;
+        int match = 0;
+        int total = 0;
+
+        // Java
+        if (jobDesc.contains("java")) {
+            total++;
+            if (resumeSkills.contains("java")) match++;
+        }
+
+        // Spring
+        if (jobDesc.contains("spring")) {
+            total++;
+            if (resumeSkills.contains("spring")) match++;
+        }
+
+        // SQL
+        if (jobDesc.contains("sql")) {
+            total++;
+            if (resumeSkills.contains("sql")) match++;
+        }
+
+        // HTML
+        if (jobDesc.contains("html")) {
+            total++;
+            if (resumeSkills.contains("html")) match++;
+        }
+
+        // CSS
+        if (jobDesc.contains("css")) {
+            total++;
+            if (resumeSkills.contains("css")) match++;
+        }
+
+        // Python
+        if (jobDesc.contains("python")) {
+            total++;
+            if (resumeSkills.contains("python")) match++;
+        }
+
+        // Git
+        if (jobDesc.contains("git")) {
+            total++;
+            if (resumeSkills.contains("git")) match++;
+        }
+
+        if (total == 0) return 0;
 
         return (match * 100) / total;
-    }}
+    }
+}
