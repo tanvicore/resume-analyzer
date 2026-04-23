@@ -2,165 +2,299 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AI Resume Analyzer</title>
+  <title>Resume Analyzer Dashboard</title>
 
   <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
     body {
-        font-family: Arial;
+        display: flex;
         background: #f4f6f8;
+    }
+
+    /* Sidebar */
+    .sidebar {
+        width: 220px;
+        background: #1f2937;
+        color: white;
+        height: 100vh;
         padding: 20px;
     }
 
-    h1 {
-        text-align: center;
+    .sidebar h2 {
+        margin-bottom: 30px;
+        font-size: 20px;
     }
 
+    .sidebar p {
+        margin: 15px 0;
+        cursor: pointer;
+        color: #9ca3af;
+    }
+
+    .sidebar p:hover {
+        color: white;
+    }
+
+    /* Main */
+    .main {
+        flex: 1;
+        padding: 20px 40px;
+    }
+
+    /* Header */
+    .header {
+        margin-bottom: 20px;
+    }
+
+    .header h1 {
+        font-size: 24px;
+        color: #111827;
+    }
+
+    .header p {
+        color: #6b7280;
+    }
+
+    /* Cards */
     .card {
         background: white;
-        padding: 15px;
-        margin: 10px;
         border-radius: 10px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
 
+    /* Inputs */
+    input, textarea {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+    }
+
+    /* Buttons */
     button {
-        padding: 8px 12px;
-        margin: 5px;
+        margin-top: 10px;
+        padding: 8px 14px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 6px;
         cursor: pointer;
     }
 
-    textarea {
-        width: 100%;
-        height: 100px;
-        margin-top: 10px;
+    button:hover {
+        background: #1d4ed8;
+    }
+
+    /* Tags */
+    .tag {
+        background: #e5e7eb;
+        padding: 4px 8px;
+        margin: 2px;
+        border-radius: 5px;
+        font-size: 12px;
+        display: inline-block;
+    }
+
+    /* Progress */
+    .progress {
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 10px;
+        margin-top: 5px;
+    }
+
+    .progress-bar {
+        height: 100%;
+        border-radius: 10px;
+    }
+
+    /* Toast */
+    .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #111827;
+        color: white;
+        padding: 10px;
+        border-radius: 6px;
+        display: none;
+    }
+
+    /* Loader */
+    .loader {
+        display: none;
+        color: #2563eb;
+        margin-bottom: 10px;
     }
   </style>
 </head>
 
 <body>
 
-<h1>📄 AI Resume Analyzer</h1>
+<!-- Sidebar -->
+<div class="sidebar">
+  <h2>🚀 Analyzer</h2>
+  <p>Dashboard</p>
+  <p>Resumes</p>
+  <p>Analytics</p>
+</div>
 
-<!-- 🔥 Upload Section -->
-<input type="file" id="file">
-<button onclick="uploadResume()">Upload Resume</button>
+<!-- Main -->
+<div class="main">
 
-<hr>
+  <div class="header">
+    <h1>Resume Analyzer</h1>
+    <p>Analyze resumes and match candidates efficiently</p>
+  </div>
 
-<!-- 🔥 Resume List -->
-<h2>All Resumes</h2>
-<div id="resumes"></div>
+  <!-- Upload -->
+  <div class="card">
+    <h3>Upload Resume</h3>
+    <input type="file" id="file">
+    <button onclick="upload()">Upload</button>
+  </div>
 
-<hr>
+  <!-- Job Desc -->
+  <div class="card">
+    <h3>Job Description</h3>
+    <textarea id="jobDesc" rows="3"></textarea>
+  </div>
 
-<!-- 🔥 Job Description -->
-<h2>🎯 Job Matching</h2>
+  <!-- Search -->
+  <div class="card">
+    <input type="text" id="search" placeholder="Search by skill..." onkeyup="filterResumes()">
+  </div>
 
-<textarea id="jobDesc" placeholder="Paste Job Description here..."></textarea>
-<br>
-<p id="result"></p>
+  <div id="count"></div>
+  <div class="loader" id="loader">Processing...</div>
+  <div id="output"></div>
+
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 
-  // 🔥 Upload Resume
-  function uploadResume() {
+  function showToast(msg){
+      let t=document.getElementById("toast");
+      t.innerText=msg;
+      t.style.display="block";
+      setTimeout(()=>t.style.display="none",2000);
+  }
 
-      let file = document.getElementById("file").files[0];
+  function upload(){
+      let file=document.getElementById("file").files[0];
+      if(!file) return showToast("Select file");
 
-      if (!file) {
-          alert("Please select a file!");
+      let formData=new FormData();
+      formData.append("file",file);
+
+      document.getElementById("loader").style.display="block";
+
+      fetch("/api/resume/upload",{method:"POST",body:formData})
+      .then(()=>{showToast("Uploaded");loadResumes();})
+      .finally(()=>document.getElementById("loader").style.display="none");
+  }
+
+  function loadResumes(){
+      fetch("/api/resume/all")
+      .then(res=>res.json())
+      .then(data=>render(data));
+  }
+
+  function render(data){
+      if(data.length===0){
+          document.getElementById("output").innerHTML="No resumes";
           return;
       }
 
-      let formData = new FormData();
-      formData.append("file", file);
+      let max=Math.max(...data.map(r=>r.score));
+      document.getElementById("count").innerHTML=`Total: ${data.length}`;
 
-      fetch("/api/resume/upload", {
-          method: "POST",
-          body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
-          alert("Uploaded Successfully!");
-          loadResumes();
+      let output="";
+
+      data.forEach(r=>{
+          let color=r.score>70?"#16a34a":r.score>40?"#f59e0b":"#dc2626";
+
+          let skills=r.skills.split(",").map(s=>`<span class="tag">${s}</span>`).join("");
+
+          output+=`
+          <div class="card">
+              <h4>${r.fileName}</h4>
+              ${r.score===max?"🏆 Top Candidate":""}
+              <div>${skills}</div>
+
+              <p>Score: ${r.score}%</p>
+              <div class="progress">
+                  <div class="progress-bar" style="width:${r.score}%;background:${color}"></div>
+              </div>
+
+              <button onclick="viewText(${r.id})">View</button>
+              <button onclick="matchJob(${r.id})">Match</button>
+              <button onclick="deleteResume(${r.id})">Delete</button>
+
+              <div id="text-${r.id}"></div>
+              <div id="match-${r.id}"></div>
+          </div>
+          `;
       });
+
+      document.getElementById("output").innerHTML=output;
   }
 
-  // 🔥 Load Resumes
-  function loadResumes() {
+  function filterResumes(){
+      let keyword=document.getElementById("search").value.toLowerCase();
 
       fetch("/api/resume/all")
-      .then(res => res.json())
-      .then(data => {
-
-          let output = "";
-
-          data.forEach(r => {
-              output += `
-                  <div class="card">
-                      <p><strong>ID:</strong> ${r.id}</p>
-                      <p><strong>📄 File:</strong> ${r.fileName}</p>
-                      <p><strong>📊 Skills:</strong> ${r.skills}</p>
-                      <p><strong>⭐ Score:</strong> ${r.score}/100</p>
-
-                      <button onclick="viewText(${r.id})">View Resume Text</button>
-
-                      <!-- 🔥 NEW BUTTON -->
-                      <button onclick="matchJob(${r.id})">Match Job</button>
-                  </div>
-              `;
-          });
-
-          document.getElementById("resumes").innerHTML = output;
+      .then(res=>res.json())
+      .then(data=>{
+          let filtered=data.filter(r=>r.skills.toLowerCase().includes(keyword));
+          render(filtered);
       });
   }
 
-  // 🔥 View Resume Text
-  function viewText(id) {
+  function deleteResume(id){
+      fetch("/api/resume/delete/"+id,{method:"DELETE"})
+      .then(()=>{showToast("Deleted");loadResumes();});
+  }
 
-      fetch("/api/resume/text/" + id)
-      .then(res => res.text())
-      .then(data => {
-          alert(data);
+  function viewText(id){
+      fetch("/api/resume/"+id)
+      .then(res=>res.json())
+      .then(data=>{
+          document.getElementById("text-"+id).innerHTML="<pre>"+data.extractedText+"</pre>";
       });
   }
 
-  // 🔥 Match Job (NO PROMPT NOW)
-  function matchJob(id) {
+  function matchJob(id){
+      let jobDesc=document.getElementById("jobDesc").value;
+      if(!jobDesc) return showToast("Enter job description");
 
-    let jobDesc = document.getElementById("jobDesc").value;
+      fetch("/api/resume/match/"+id,{
+          method:"POST",
+          headers:{"Content-Type":"text/plain"},
+          body:jobDesc
+      })
+      .then(res=>res.text())
+      .then(data=>{
+          document.getElementById("match-"+id).innerHTML=`
+          Match: ${data}%
+          <div class="progress">
+              <div class="progress-bar" style="width:${data}%;background:#2563eb"></div>
+          </div>`;
+      });
+  }
 
-    // ❗ CLEAR OLD RESULT FIRST
-    document.getElementById("result").innerHTML = "";
-
-    if (jobDesc.trim() === "") {
-        alert("Enter job description!");
-        return;
-    }
-
-    fetch("/api/resume/match/" + id, {
-        method: "POST",
-        headers: {
-            "Content-Type": "text/plain"
-        },
-        body: jobDesc
-    })
-    .then(res => res.text())
-    .then(data => {
-
-        // ❗ FORCE UPDATE NEW RESULT
-        document.getElementById("result").innerHTML =
-            "🔥 Resume ID " + id + " Match: " + data + "%";
-
-    })
-    .catch(err => {
-        console.log(err);
-        alert("Error in matching");
-    });
-}
-
-  // 🔥 Load on start
-  loadResumes();
+  window.onload=loadResumes;
 
 </script>
 
